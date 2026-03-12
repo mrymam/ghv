@@ -17,9 +17,10 @@ var (
 
 func newRootCmd() *cobra.Command {
 	root := &cobra.Command{
-		Use:   "ghv",
-		Short: "GitHub PR dashboard CLI",
-		Long:  "GitHub上の自分に関連するPRをターミナルで表形式に一覧表示するCLIツール。",
+		Use:     "ghv",
+		Short:   "GitHub PR dashboard CLI",
+		Long:    "GitHub上の自分に関連するPRをターミナルで表形式に一覧表示するCLIツール。",
+		Version: version,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return runDefault(cmd)
 		},
