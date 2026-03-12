@@ -12,6 +12,8 @@ GitHub上の自分に関連するPRをターミナルで表形式に一覧表示
 - **TUIモード** — インタラクティブなターミナルUI（bubbletea + lipgloss）
   - タブ切替、カーソル移動、Enterでブラウザ表示
   - `--poll` オプションで自動ポーリング対応
+- **Notifyモード** — 新しいレビューリクエストをmacOS通知で自動通知
+  - `--polling` でポーリング間隔を指定（デフォルト5分）
 - **クリップボードコピー** — `-copy` オプションでPRタイトルをリッチテキストリンクとしてクリップボードにコピー（Slack/Teamsに貼り付け可能）
 - タイトルはOSC 8ハイパーリンク対応（クリックでPRページを開く）
 
@@ -51,6 +53,12 @@ ghv tui
 
 # TUIモード + 5分ごとに自動リロード
 ghv tui --poll 5m
+
+# 新しいレビューリクエストをmacOS通知で監視
+ghv notify
+
+# 3分間隔でポーリング
+ghv notify --polling 3m
 
 # PR一覧をクリップボードにコピー
 ghv -copy
@@ -102,6 +110,21 @@ ghv tui --poll 30s   # 30秒ごと
 
 `--poll` を指定しない場合は自動リロードは無効です。`r` キーで手動リロードできます。
 
+### Notifyモード
+
+```bash
+# デフォルト5分間隔で監視
+ghv notify
+
+# 3分間隔
+ghv notify --polling 3m
+
+# 1時間間隔
+ghv notify --polling 1h
+```
+
+新しいレビューリクエストが来ると、macOS通知センターにサウンド付きで通知されます。`Ctrl+C` で停止します。
+
 ## 環境変数
 
 | 変数名 | 説明 |
@@ -138,5 +161,6 @@ export GHV_IGNORE_REVIEWERS="renovate[bot],dependabot[bot]"
 | `review.go` | レビューリクエストPR表示（`cmdReview`, `printSection`） |
 | `bot.go` | Bot PR表示（`cmdBot`） |
 | `tui.go` | TUIモード（bubbletea + lipgloss） |
+| `watch.go` | Notifyモード（ポーリング + macOS通知） |
 | `util.go` | PR型定義、API呼び出し、ヘルパー関数 |
 | `clipboard.go` | クリップボードコピー機能（HTML→RTF変換） |

@@ -44,6 +44,7 @@ func newRootCmd() *cobra.Command {
 	root.AddCommand(newReviewCmd())
 	root.AddCommand(newBotCmd())
 	root.AddCommand(newTUICmd())
+	root.AddCommand(newNotifyCmd())
 	root.AddCommand(newVersionCmd())
 
 	return root
