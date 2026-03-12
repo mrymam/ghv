@@ -30,6 +30,7 @@ func newRootCmd() *cobra.Command {
 	root.AddCommand(newMyCmd())
 	root.AddCommand(newReviewCmd())
 	root.AddCommand(newBotCmd())
+	root.AddCommand(newTUICmd())
 
 
 	return root
