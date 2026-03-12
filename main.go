@@ -31,7 +31,7 @@ func newRootCmd() *cobra.Command {
 		Use:     "ghv",
 		Short:   "GitHub PR dashboard CLI",
 		Long:    "GitHub上の自分に関連するPRをターミナルで表形式に一覧表示するCLIツール。",
-		Version: version,
+		Version: getVersion(),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return runDefault(cmd)
 		},
