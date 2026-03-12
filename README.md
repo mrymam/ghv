@@ -8,6 +8,7 @@ GitHub上の自分に関連するPRをターミナルで表形式に一覧表示
   - `open` / `draft` / `approved` / `reviewed (N unresolved)`
   - レビュースレッドの未解決数をGraphQL APIで取得
 - **レビューリクエスト** — レビュー待ちPRを作成者付きで表示
+- **Bot PR** — 指定リポジトリのBot作成PRを一覧表示（`user.type` で自動判定）
 - タイトルはOSC 8ハイパーリンク対応（クリックでPRページを開く）
 
 ## 前提条件
@@ -40,6 +41,9 @@ gv my
 
 # レビューリクエストされたPRのみ表示
 gv review
+
+# Bot PRを表示
+gv bot
 ```
 
 ### Organization でフィルタ
@@ -62,6 +66,17 @@ gv
 |--------|------|
 | `GV_ORG` | デフォルトの organization フィルタ |
 | `GV_IGNORE_REVIEWERS` | 無視するレビュアーのアカウント名（カンマ区切り） |
+| `GV_BOT_REPOS` | Bot PR をwatchするリポジトリ名一覧（カンマ区切り、org名不要） |
+
+### `GV_BOT_REPOS`
+
+`gv bot` で監視するリポジトリ名を指定します（org名不要、`GV_ORG` から自動補完）。各リポジトリのopen PRのうち、GitHubの `user.type == "Bot"` で自動判定されたものだけを表示します。
+
+```bash
+export GV_ORG=myorg
+export GV_BOT_REPOS="frontend,backend"
+gv bot
+```
 
 ### `GV_IGNORE_REVIEWERS`
 
