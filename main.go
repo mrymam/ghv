@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"os"
+	"runtime/debug"
 	"strings"
 	"sync"
 
@@ -10,10 +11,21 @@ import (
 )
 
 var (
-	version  = "dev"
+	version  = ""
 	orgFlag  string
 	copyFlag bool
 )
+
+func init() {
+	if version != "" {
+		return
+	}
+	if info, ok := debug.ReadBuildInfo(); ok && info.Main.Version != "" && info.Main.Version != "(devel)" {
+		version = info.Main.Version
+	} else {
+		version = "dev"
+	}
+}
 
 func newRootCmd() *cobra.Command {
 	root := &cobra.Command{
