@@ -16,15 +16,14 @@ var (
 	copyFlag bool
 )
 
-func init() {
+func getVersion() string {
 	if version != "" {
-		return
+		return version
 	}
 	if info, ok := debug.ReadBuildInfo(); ok && info.Main.Version != "" && info.Main.Version != "(devel)" {
-		version = info.Main.Version
-	} else {
-		version = "dev"
+		return info.Main.Version
 	}
+	return "dev"
 }
 
 func newRootCmd() *cobra.Command {
@@ -134,7 +133,7 @@ func newVersionCmd() *cobra.Command {
 		Use:   "version",
 		Short: "バージョンを表示",
 		Run: func(cmd *cobra.Command, args []string) {
-			fmt.Printf("ghv version %s\n", version)
+			fmt.Printf("ghv version %s\n", getVersion())
 		},
 	}
 }
