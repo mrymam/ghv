@@ -2,7 +2,6 @@ package main
 
 import (
 	"encoding/json"
-	"flag"
 	"fmt"
 	"os"
 	"os/exec"
@@ -40,8 +39,10 @@ func (pr PR) RepoName() string {
 
 // reviewStatus holds the review thread summary for a PR.
 type reviewStatus struct {
-	Unresolved int
-	Total      int
+	Unresolved    int
+	Total         int
+	ApproveCount  int
+	ChangesCount  int
 }
 
 // combinedStatus returns a merged status string combining PR state and review status.
@@ -49,13 +50,24 @@ func combinedStatus(pr PR, rs reviewStatus) (label string, color string) {
 	if pr.Draft {
 		return "draft", "\033[2m"
 	}
-	if rs.Total == 0 {
-		return "open", "\033[32m"
+	if rs.ChangesCount > 0 {
+		suffix := ""
+		if rs.Unresolved > 0 {
+			suffix = fmt.Sprintf(", %d unresolved", rs.Unresolved)
+		}
+		return fmt.Sprintf("changes requested (%d)%s", rs.ChangesCount, suffix), "\033[31m"
 	}
-	if rs.Unresolved == 0 {
-		return "approved", "\033[1;32m"
+	if rs.ApproveCount > 0 {
+		suffix := ""
+		if rs.Unresolved > 0 {
+			suffix = fmt.Sprintf(", %d unresolved", rs.Unresolved)
+		}
+		return fmt.Sprintf("approved (%d)%s", rs.ApproveCount, suffix), "\033[1;32m"
 	}
-	return fmt.Sprintf("reviewed (%d unresolved)", rs.Unresolved), "\033[33m"
+	if rs.Unresolved > 0 {
+		return fmt.Sprintf("reviewed (%d unresolved)", rs.Unresolved), "\033[33m"
+	}
+	return "open", "\033[32m"
 }
 
 // ignoredReviewers returns the set of reviewer logins to ignore from GV_IGNORE_REVIEWERS.
@@ -92,6 +104,12 @@ func fetchReviewStatus(pr PR, ignore map[string]bool) reviewStatus {
           }
         }
       }
+      latestOpinionatedReviews(first:100){
+        nodes{
+          state
+          author{ login }
+        }
+      }
     }
   }
 }`
@@ -121,6 +139,14 @@ func fetchReviewStatus(pr PR, ignore map[string]bool) reviewStatus {
 							} `json:"comments"`
 						} `json:"nodes"`
 					} `json:"reviewThreads"`
+					LatestOpinionatedReviews struct {
+						Nodes []struct {
+							State  string `json:"state"`
+							Author struct {
+								Login string `json:"login"`
+							} `json:"author"`
+						} `json:"nodes"`
+					} `json:"latestOpinionatedReviews"`
 				} `json:"pullRequest"`
 			} `json:"repository"`
 		} `json:"data"`
@@ -132,7 +158,6 @@ func fetchReviewStatus(pr PR, ignore map[string]bool) reviewStatus {
 	total := 0
 	unresolved := 0
 	for _, t := range threads {
-		// Skip threads started by ignored reviewers
 		if len(t.Comments.Nodes) > 0 && ignore[t.Comments.Nodes[0].Author.Login] {
 			continue
 		}
@@ -141,7 +166,21 @@ func fetchReviewStatus(pr PR, ignore map[string]bool) reviewStatus {
 			unresolved++
 		}
 	}
-	return reviewStatus{Unresolved: unresolved, Total: total}
+	approveCount := 0
+	changesCount := 0
+	reviews := resp.Data.Repository.PullRequest.LatestOpinionatedReviews.Nodes
+	for _, r := range reviews {
+		if ignore[r.Author.Login] {
+			continue
+		}
+		switch r.State {
+		case "APPROVED":
+			approveCount++
+		case "CHANGES_REQUESTED":
+			changesCount++
+		}
+	}
+	return reviewStatus{Unresolved: unresolved, Total: total, ApproveCount: approveCount, ChangesCount: changesCount}
 }
 
 // fetchAllReviewStatuses fetches review status for all PRs in parallel.
@@ -271,17 +310,6 @@ func printHeader(username, org string) {
 	fmt.Println(header)
 }
 
-
-// flagSet returns true if the named flag was explicitly set on the command line.
-func flagSet(fs *flag.FlagSet, name string) bool {
-	found := false
-	fs.Visit(func(f *flag.Flag) {
-		if f.Name == name {
-			found = true
-		}
-	})
-	return found
-}
 
 func sortPRsByUpdated(prs []PR) {
 	for i := 0; i < len(prs); i++ {
