@@ -31,6 +31,7 @@ func newRootCmd() *cobra.Command {
 	root.AddCommand(newReviewCmd())
 	root.AddCommand(newBotCmd())
 
+
 	return root
 }
 
