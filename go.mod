@@ -1,4 +1,4 @@
-module github.com/mrymam/github-viewer
+module github.com/mrymam/ghv
 
 go 1.25.4
 

@@ -16,7 +16,7 @@ var (
 
 func newRootCmd() *cobra.Command {
 	root := &cobra.Command{
-		Use:   "gv",
+		Use:   "ghv",
 		Short: "GitHub PR dashboard CLI",
 		Long:  "GitHub上の自分に関連するPRをターミナルで表形式に一覧表示するCLIツール。",
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -24,7 +24,7 @@ func newRootCmd() *cobra.Command {
 		},
 	}
 
-	root.PersistentFlags().StringVar(&orgFlag, "org", "", "Filter by GitHub organization (also via GV_ORG env)")
+	root.PersistentFlags().StringVar(&orgFlag, "org", "", "Filter by GitHub organization (also via GHV_ORG env)")
 	root.PersistentFlags().BoolVar(&copyFlag, "copy", false, "Copy PR list as rich text links to clipboard")
 
 	root.AddCommand(newMyCmd())
@@ -38,7 +38,7 @@ func newRootCmd() *cobra.Command {
 func resolveOrg() (string, string) {
 	org := orgFlag
 	if org == "" {
-		org = os.Getenv("GV_ORG")
+		org = os.Getenv("GHV_ORG")
 	}
 	return org, orgQualifier(org)
 }
@@ -47,7 +47,7 @@ func resolveCopy(cmd *cobra.Command) bool {
 	if cmd.Flags().Changed("copy") {
 		return copyFlag
 	}
-	if v := os.Getenv("GV_DEFAULT_COPY_ON"); v != "" {
+	if v := os.Getenv("GHV_DEFAULT_COPY_ON"); v != "" {
 		return strings.EqualFold(v, "true")
 	}
 	return false
@@ -99,7 +99,7 @@ func newReviewCmd() *cobra.Command {
 func newBotCmd() *cobra.Command {
 	return &cobra.Command{
 		Use:   "bot",
-		Short: "Bot PRを表示 (GV_BOT_REPOS + GV_ORG で指定)",
+		Short: "Bot PRを表示 (GHV_BOT_REPOS + GHV_ORG で指定)",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			org, _ := resolveOrg()
 			username, err := getUsername()

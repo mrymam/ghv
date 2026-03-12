@@ -70,9 +70,9 @@ func combinedStatus(pr PR, rs reviewStatus) (label string, color string) {
 	return "open", "\033[32m"
 }
 
-// ignoredReviewers returns the set of reviewer logins to ignore from GV_IGNORE_REVIEWERS.
+// ignoredReviewers returns the set of reviewer logins to ignore from GHV_IGNORE_REVIEWERS.
 func ignoredReviewers() map[string]bool {
-	env := os.Getenv("GV_IGNORE_REVIEWERS")
+	env := os.Getenv("GHV_IGNORE_REVIEWERS")
 	if env == "" {
 		return nil
 	}

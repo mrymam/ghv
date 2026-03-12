@@ -7,13 +7,13 @@ import (
 )
 
 func cmdBot(org string) {
-	repos := splitEnv(os.Getenv("GV_BOT_REPOS"))
+	repos := splitEnv(os.Getenv("GHV_BOT_REPOS"))
 	if len(repos) == 0 {
-		fmt.Fprintln(os.Stderr, "\033[1;31mGV_BOT_REPOS を設定してください (例: GV_BOT_REPOS=frontend,backend)\033[0m")
+		fmt.Fprintln(os.Stderr, "\033[1;31mGHV_BOT_REPOS を設定してください (例: GHV_BOT_REPOS=frontend,backend)\033[0m")
 		return
 	}
 	if org == "" {
-		fmt.Fprintln(os.Stderr, "\033[1;31mGV_ORG または -org を指定してください\033[0m")
+		fmt.Fprintln(os.Stderr, "\033[1;31mGHV_ORG または -org を指定してください\033[0m")
 		return
 	}
 
