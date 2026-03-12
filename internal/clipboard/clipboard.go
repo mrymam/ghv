@@ -1,4 +1,4 @@
-package main
+package clipboard
 
 import (
 	"fmt"
@@ -8,26 +8,29 @@ import (
 	"sync"
 )
 
-type clipboardItem struct {
+// ClipboardItem represents a single item to be copied to the clipboard.
+type ClipboardItem struct {
 	Title string
 	URL   string
 }
 
-var clipboardItems []clipboardItem
-var clipboardMu sync.Mutex
+var items []ClipboardItem
+var mu sync.Mutex
 
-func appendClipboard(items []clipboardItem) {
-	clipboardMu.Lock()
-	defer clipboardMu.Unlock()
-	clipboardItems = append(clipboardItems, items...)
+// AppendClipboard adds items to the clipboard buffer.
+func AppendClipboard(newItems []ClipboardItem) {
+	mu.Lock()
+	defer mu.Unlock()
+	items = append(items, newItems...)
 }
 
-func flushClipboard() {
-	if len(clipboardItems) == 0 {
+// FlushClipboard converts accumulated items to RTF and copies to clipboard.
+func FlushClipboard() {
+	if len(items) == 0 {
 		return
 	}
 	var lines []string
-	for _, item := range clipboardItems {
+	for _, item := range items {
 		lines = append(lines, fmt.Sprintf("<a href=\"%s\">%s</a>", item.URL, item.Title))
 	}
 	html := `<html><head><meta charset="utf-8"></head><body>` + strings.Join(lines, "<br>") + "</body></html>"

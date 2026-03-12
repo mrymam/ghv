@@ -1,4 +1,4 @@
-package main
+package command
 
 import (
 	"fmt"
@@ -6,10 +6,12 @@ import (
 	"os/exec"
 	"time"
 
+	gh "github.com/mrymam/ghv/pkg/github"
 	"github.com/spf13/cobra"
 )
 
-func newNotifyCmd() *cobra.Command {
+// NewNotifyCmd creates the notify subcommand.
+func NewNotifyCmd() *cobra.Command {
 	var polling time.Duration
 
 	cmd := &cobra.Command{
@@ -30,8 +32,8 @@ func newNotifyCmd() *cobra.Command {
 }
 
 func runWatch(interval time.Duration) error {
-	_, orgQ := resolveOrg()
-	username, err := getUsername()
+	_, orgQ := ResolveOrg()
+	username, err := gh.GetUsername()
 	if err != nil {
 		return err
 	}
@@ -42,7 +44,7 @@ func runWatch(interval time.Duration) error {
 	known := make(map[string]bool)
 
 	// Initial fetch to populate known PRs
-	prs, err := ghSearchPRs(fmt.Sprintf("review-requested:%s%s", username, orgQ))
+	prs, err := gh.SearchPRs(fmt.Sprintf("review-requested:%s%s", username, orgQ))
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Warning: initial fetch failed: %v\n", err)
 	} else {
@@ -56,7 +58,7 @@ func runWatch(interval time.Duration) error {
 	defer ticker.Stop()
 
 	for range ticker.C {
-		prs, err := ghSearchPRs(fmt.Sprintf("review-requested:%s%s", username, orgQ))
+		prs, err := gh.SearchPRs(fmt.Sprintf("review-requested:%s%s", username, orgQ))
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Poll error: %v\n", err)
 			continue
@@ -78,7 +80,7 @@ func runWatch(interval time.Duration) error {
 	return nil
 }
 
-func sendNotification(pr PR) {
+func sendNotification(pr gh.PR) {
 	title := "New Review Request"
 	subtitle := fmt.Sprintf("%s by %s", pr.RepoName(), pr.User.Login)
 	message := pr.Title
@@ -103,4 +105,3 @@ func sendNotification(pr PR) {
 
 	fmt.Printf("🔔 %s: %s (%s)\n", pr.RepoName(), pr.Title, pr.HTMLURL)
 }
-

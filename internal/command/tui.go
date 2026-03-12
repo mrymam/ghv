@@ -1,7 +1,8 @@
-package main
+package command
 
 import (
 	"fmt"
+	"os"
 	"os/exec"
 	"runtime"
 	"strings"
@@ -10,6 +11,8 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+	"github.com/mrymam/ghv/internal/format"
+	gh "github.com/mrymam/ghv/pkg/github"
 	"github.com/spf13/cobra"
 )
 
@@ -18,8 +21,8 @@ const defaultPollInterval = 5 * time.Minute
 // section represents a tab in the TUI.
 type section struct {
 	title     string
-	prs       []PR
-	statusMap map[string]reviewStatus
+	prs       []gh.PR
+	statusMap map[string]gh.ReviewStatus
 }
 
 type tuiModel struct {
@@ -52,48 +55,49 @@ func initialModel(username, org string, pollInterval time.Duration) tuiModel {
 
 func loadData(username, orgQ, org string) tea.Cmd {
 	return func() tea.Msg {
-		var myPRs, reviewPRs []PR
-		var myStatus, reviewStatus map[string]reviewStatus
+		ignore := gh.ParseIgnoredReviewers(os.Getenv("GHV_IGNORE_REVIEWERS"))
+		var myPRs, reviewPRs []gh.PR
+		var myStatus, revStatus map[string]gh.ReviewStatus
 		var wg sync.WaitGroup
 
 		// Fetch My PRs
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			var authorRes, assigneeRes fetchResult
+			var authorRes, assigneeRes gh.FetchResult
 			var wg2 sync.WaitGroup
 			wg2.Add(2)
 			go func() {
 				defer wg2.Done()
-				prs, err := ghSearchPRs(fmt.Sprintf("author:%s%s", username, orgQ))
-				authorRes = fetchResult{prs, err}
+				prs, err := gh.SearchPRs(fmt.Sprintf("author:%s%s", username, orgQ))
+				authorRes = gh.FetchResult{PRs: prs, Err: err}
 			}()
 			go func() {
 				defer wg2.Done()
-				prs, err := ghSearchPRs(fmt.Sprintf("assignee:%s%s", username, orgQ))
-				assigneeRes = fetchResult{prs, err}
+				prs, err := gh.SearchPRs(fmt.Sprintf("assignee:%s%s", username, orgQ))
+				assigneeRes = gh.FetchResult{PRs: prs, Err: err}
 			}()
 			wg2.Wait()
-			myPRs = mergePRs(authorRes.prs, assigneeRes.prs)
-			sortPRsByUpdated(myPRs)
-			myStatus = fetchAllReviewStatuses(myPRs)
+			myPRs = gh.MergePRs(authorRes.PRs, assigneeRes.PRs)
+			gh.SortPRsByUpdated(myPRs)
+			myStatus = gh.FetchAllReviewStatuses(myPRs, ignore)
 		}()
 
 		// Fetch Review PRs
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			prs, _ := ghSearchPRs(fmt.Sprintf("review-requested:%s%s", username, orgQ))
-			sortPRsByUpdated(prs)
+			prs, _ := gh.SearchPRs(fmt.Sprintf("review-requested:%s%s", username, orgQ))
+			gh.SortPRsByUpdated(prs)
 			reviewPRs = prs
-			reviewStatus = fetchAllReviewStatuses(prs)
+			revStatus = gh.FetchAllReviewStatuses(prs, ignore)
 		}()
 
 		wg.Wait()
 
 		sections := []section{
 			{title: "🔧 自分のPR", prs: myPRs, statusMap: myStatus},
-			{title: "👀 レビュー待ち", prs: reviewPRs, statusMap: reviewStatus},
+			{title: "👀 レビュー待ち", prs: reviewPRs, statusMap: revStatus},
 		}
 		return dataLoadedMsg{sections: sections}
 	}
@@ -109,8 +113,8 @@ func (m tuiModel) scheduleTick() tea.Cmd {
 }
 
 func (m tuiModel) Init() tea.Cmd {
-	_, orgQ := resolveOrg()
-	org, _ := resolveOrg()
+	_, orgQ := ResolveOrg()
+	org, _ := ResolveOrg()
 	return tea.Batch(loadData(m.username, orgQ, org), m.scheduleTick())
 }
 
@@ -122,8 +126,8 @@ func (m tuiModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case tickMsg:
 		m.loading = true
-		_, orgQ := resolveOrg()
-		org, _ := resolveOrg()
+		_, orgQ := ResolveOrg()
+		org, _ := ResolveOrg()
 		return m, loadData(m.username, orgQ, org)
 
 	case dataLoadedMsg:
@@ -172,8 +176,8 @@ func (m tuiModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 		case "r":
 			m.loading = true
-			_, orgQ := resolveOrg()
-			org, _ := resolveOrg()
+			_, orgQ := ResolveOrg()
+			org, _ := ResolveOrg()
 			return m, loadData(m.username, orgQ, org)
 		}
 	}
@@ -243,13 +247,13 @@ func (m tuiModel) View() string {
 
 		for i := start; i < end; i++ {
 			pr := sec.prs[i]
-			repo := truncate(pr.RepoName(), 20)
-			title := truncate(pr.Title, 50)
-			age := formatAge(pr.UpdatedAt)
+			repo := format.Truncate(pr.RepoName(), 20)
+			title := format.Truncate(pr.Title, 50)
+			age := format.FormatAge(pr.UpdatedAt)
 
 			var line string
 			if sec.statusMap != nil {
-				status, _ := combinedStatus(pr, sec.statusMap[pr.HTMLURL])
+				status, _ := gh.CombinedStatus(pr, sec.statusMap[pr.HTMLURL])
 				var styledStatus string
 				switch {
 				case strings.HasPrefix(status, "approved"):
@@ -304,17 +308,18 @@ func openBrowser(url string) {
 	}
 }
 
-func newTUICmd() *cobra.Command {
+// NewTUICmd creates the tui subcommand.
+func NewTUICmd() *cobra.Command {
 	var pollFlag time.Duration
 	cmd := &cobra.Command{
 		Use:   "tui",
 		Short: "インタラクティブなTUI表示",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			username, err := getUsername()
+			username, err := gh.GetUsername()
 			if err != nil {
 				return err
 			}
-			org, _ := resolveOrg()
+			org, _ := ResolveOrg()
 			var interval time.Duration
 			if cmd.Flags().Changed("poll") {
 				interval = pollFlag
