@@ -125,6 +125,14 @@ ghv notify --polling 1h
 
 新しいレビューリクエストが来ると、macOS通知センターにサウンド付きで通知されます。`Ctrl+C` で停止します。
 
+> **注意:** Notifyモードは **macOS専用** です。
+>
+> - [`terminal-notifier`](https://github.com/julienXX/terminal-notifier) がインストールされている場合、通知クリックでPRをブラウザで開けます
+>   ```bash
+>   brew install terminal-notifier
+>   ```
+> - 未インストールの場合は `osascript` にフォールバックします（通知クリックでのURL遷移は不可）
+
 ## 環境変数
 
 | 変数名 | 説明 |
