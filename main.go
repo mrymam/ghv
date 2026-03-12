@@ -10,6 +10,7 @@ import (
 )
 
 var (
+	version  = "dev"
 	orgFlag  string
 	copyFlag bool
 )
@@ -31,7 +32,7 @@ func newRootCmd() *cobra.Command {
 	root.AddCommand(newReviewCmd())
 	root.AddCommand(newBotCmd())
 	root.AddCommand(newTUICmd())
-
+	root.AddCommand(newVersionCmd())
 
 	return root
 }
@@ -111,6 +112,16 @@ func newBotCmd() *cobra.Command {
 			cmdBot(org)
 			postRun(cmd)
 			return nil
+		},
+	}
+}
+
+func newVersionCmd() *cobra.Command {
+	return &cobra.Command{
+		Use:   "version",
+		Short: "バージョンを表示",
+		Run: func(cmd *cobra.Command, args []string) {
+			fmt.Printf("ghv version %s\n", version)
 		},
 	}
 }
